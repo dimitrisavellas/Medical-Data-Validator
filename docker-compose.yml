@@ -1,0 +1,10 @@
+version: '3.9'
+services:
+  data-validator:
+    build: .
+    container_name: clinical_data_validator
+    volumes:
+      - ./data:/data
+      - ./logs:/logs
+    environment:
+      - VALIDATION_MODE=strict
