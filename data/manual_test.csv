@@ -1,0 +1,101 @@
+patient_id,visit_date,measurement,lab_test,notes
+P718,2024-01-19,69.3,cholesterol,Abnormal
+P936,2024-01-29,50.2,blood_pressure,Routine
+P215,2024-01-30,50.1,cholesterol,Follow-up
+P748,2024-01-20,58.5,cholesterol,Abnormal
+P189,2024-01-02,147.8,cholesterol,Patient arrived late
+P233,2024-01-30,123.1,cholesterol,Follow-up
+P167,2024-01-06,160.9,cholesterol,Routine
+P519,2024-01-26,115.3,glucose,Fasting
+P546,2024-01-02,176.8,cholesterol,Fasting
+P236,2024-01-09,149.3,cholesterol,Normal
+P154,2024-01-27,63.6,blood_pressure,Normal
+P813,2024-01-31,170.7,blood_pressure,Patient arrived late
+P655,2024-01-13,103.9,glucose,Follow-up
+P066,2024-01-22,111.2,glucose,Fasting
+P670,2024-01-27,165.6,glucose,Abnormal
+P573,2024-01-20,179.2,glucose,Abnormal
+P162,2024-01-15,128.0,cholesterol,Follow-up
+P345,2024-01-03,79.7,cholesterol,Patient arrived late
+P853,2024-01-31,66.5,blood_pressure,Normal
+P276,2024-01-03,157.6,glucose,Routine
+P777,2024-01-24,81.4,cholesterol,Routine
+P906,2024-01-06,108.4,cholesterol,Fasting
+P605,2024-01-06,148.4,cholesterol,Patient arrived late
+P524,2024-01-15,141.4,blood_pressure,Patient arrived late
+P782,2024-01-28,106.2,blood_pressure,Fasting
+P364,2024-01-28,64.7,glucose,Abnormal
+P126,2024-01-18,77.9,glucose,Routine
+P108,2024-01-23,86.6,cholesterol,Patient arrived late
+P418,2024-01-17,142.5,cholesterol,Abnormal
+P605,2024-01-06,168.8,cholesterol,Abnormal
+P362,2024-01-10,101.6,cholesterol,Patient arrived late
+P504,2024-01-28,71.2,cholesterol,Follow-up
+P525,2024-01-28,106.6,glucose,Routine
+P953,2024-01-09,115.6,blood_pressure,Normal
+P521,2024-01-08,93.1,glucose,Abnormal
+P532,2024-01-03,163.5,cholesterol,Routine
+P823,2024-01-06,176.2,glucose,Normal
+P036,2024-01-09,84.8,cholesterol,Abnormal
+P679,2024-01-15,135.7,blood_pressure,Follow-up
+P185,2024-01-22,142.8,glucose,Abnormal
+P493,2024-01-22,131.7,glucose,Abnormal
+P264,2024-01-16,177.6,glucose,Patient arrived late
+P033,2024-01-28,156.8,blood_pressure,Follow-up
+P079,2024-01-15,69.3,blood_pressure,Normal
+P212,2024-01-31,118.6,blood_pressure,Abnormal
+P160,2024-01-05,167.2,blood_pressure,Follow-up
+P901,2024-01-03,70.0,blood_pressure,Normal
+P950,2024-01-11,132.8,blood_pressure,Normal
+P220,2024-01-28,55.6,cholesterol,Fasting
+P895,2024-01-19,108.8,blood_pressure,Patient arrived late
+P059,2024-01-06,60.9,blood_pressure,Abnormal
+P511,2024-01-27,90.6,blood_pressure,Follow-up
+P740,2024-01-17,178.5,cholesterol,Fasting
+P883,2024-01-26,156.5,blood_pressure,Routine
+P427,2024-01-26,167.5,glucose,Normal
+P536,2024-01-09,82.9,cholesterol,Routine
+P720,2024-01-03,161.0,cholesterol,Fasting
+P010,2024-01-28,106.9,glucose,Fasting
+P307,2024-01-17,134.1,cholesterol,Routine
+P883,2024-01-26,140.4,glucose,Routine
+P220,2024-01-15,53.0,glucose,Fasting
+P437,2024-01-18,117.8,cholesterol,Patient arrived late
+P701,2024-01-17,112.8,cholesterol,Patient arrived late
+P292,2024-01-15,103.0,glucose,Follow-up
+P900,2024-01-03,175.3,blood_pressure,Abnormal
+P682,2024-01-04,115.1,blood_pressure,Fasting
+P742,2024-01-03,157.0,cholesterol,Patient arrived late
+P848,2024-01-14,66.7,blood_pressure,Patient arrived late
+P870,2024-01-13,85.9,cholesterol,Follow-up
+P885,2024-01-28,145.1,cholesterol,Routine
+P851,2024-01-06,134.9,glucose,Abnormal
+P888,2024-01-19,139.9,cholesterol,Patient arrived late
+P613,2024-01-07,62.3,glucose,Fasting
+P460,2024-01-13,58.9,cholesterol,Routine
+P676,2024-01-11,145.6,blood_pressure,Patient arrived late
+P506,2024-01-31,67.1,blood_pressure,Follow-up
+P812,2024-01-05,120.8,glucose,Follow-up
+P461,2024-01-13,99.5,cholesterol,Abnormal
+P923,2024-01-06,107.3,cholesterol,Patient arrived late
+P335,2024-01-28,130.4,glucose,Follow-up
+P231,2024-01-13,64.5,cholesterol,Normal
+P560,2024-01-16,141.5,blood_pressure,Normal
+P525,2024-01-31,176.6,cholesterol,Routine
+P520,2024-01-23,72.4,cholesterol,Patient arrived late
+P610,2024-01-06,179.7,blood_pressure,Patient arrived late
+P049,2024-01-09,95.3,glucose,Normal
+P704,2024-01-24,124.7,glucose,Abnormal
+P295,2024-01-15,126.2,cholesterol,Fasting
+P851,2024-01-28,103.2,cholesterol,Follow-up
+P012,2024-01-07,173.4,glucose,Abnormal
+P131,2024-01-26,128.2,cholesterol,Routine
+P293,2024-01-18,108.5,cholesterol,Patient arrived late
+P908,2024-01-15,153.8,cholesterol,Normal
+P415,2024-01-18,161.2,cholesterol,Normal
+P504,2024-01-17,129.0,cholesterol,Routine
+P429,2024-01-28,93.5,glucose,Fasting
+P879,2024-01-07,127.6,glucose,Abnormal
+P568,2024-01-07,139.7,cholesterol,Normal
+P168,2024-01-26,84.9,cholesterol,Follow-up
+P672,2024-01-22,157.7,glucose,Follow-up

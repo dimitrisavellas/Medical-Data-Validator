@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import datetime
 from typing import Optional
 
@@ -25,6 +25,32 @@ class ClinicalRecord(BaseModel):
         except ValueError:
             raise ValueError('Date must be in ISO format (YYYY-MM-DD)')
         return v
+
+    @model_validator(mode='after')
+    def validate_clinical_logic(self):
+        lab_test = self.lab_test.lower() if self.lab_test else ""
+        measurement = self.measurement
+        notes = self.notes.lower() if self.notes else ""
+
+        if lab_test == "blood_pressure" and measurement is not None:
+            # Hypotension Rule
+            if measurement < 90 and "normal" in notes:
+                raise ValueError(
+                    f"Clinical Mismatch: BP of {measurement} indicates Hypotension but notes say 'Normal'"
+                )
+            # Hypertension Rule
+            if measurement > 140 and "normal" in notes:
+                raise ValueError(
+                    f"Clinical Mismatch: BP of {measurement} indicates Hypertension but notes say 'Normal'"
+                )
+            # Conflict Rule: Normal range but marked Abnormal
+            # Assuming normal range is [90, 120] based on the prompt's Conflict Rule description
+            if 90 <= measurement <= 120 and "abnormal" in notes:
+                raise ValueError(
+                    f"Clinical Mismatch: BP of {measurement} is within normal range (90-120) but notes say 'Abnormal'"
+                )
+
+        return self
 
     model_config = {
         "json_schema_extra": {
