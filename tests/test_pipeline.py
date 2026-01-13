@@ -1,6 +1,5 @@
 import pytest
 import pandas as pd
-from app.pipeline import ClinicalDataValidator
 from app.clinical_schema import ClinicalRecord
 
 def test_clinical_record_validation():

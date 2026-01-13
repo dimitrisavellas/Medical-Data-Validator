@@ -37,3 +37,15 @@ class ClinicalRecord(BaseModel):
             }
         }
     }
+
+# Pandera schema for DataFrame validation
+import pandera as pa
+from pandera import Column, Check, DataFrameSchema
+
+clinical_schema = DataFrameSchema({
+    "patient_id": Column(str, checks=Check.str_matches(r'^P\d{3}$')),
+    "visit_date": Column(str),
+    "measurement": Column(float, checks=Check.in_range(0, 200), nullable=True),
+    "lab_test": Column(str, checks=Check.isin(['blood_pressure', 'glucose', 'cholesterol'])),
+    "notes": Column(str, nullable=True)
+}, coerce=True)

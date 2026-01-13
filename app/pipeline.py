@@ -1,194 +1,134 @@
-import sys
-sys.path.append('/app')
+import hashlib
+import json
 import pandas as pd
 import pandera.pandas as pa
-from pandera import Column, Check, DataFrameSchema
-import json
 from datetime import datetime
+from typing import Tuple, Dict, Optional
 from loguru import logger
-from typing import Tuple, Dict
-import hashlib
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import AuditDatabase
-from clinical_schema import ClinicalRecord
+from app.clinical_schema import ClinicalRecord, clinical_schema
+from app.models import AuditLog
 
+class ValidationService:
+    def __init__(self, db: AsyncSession):
+        self.db = db
 
-# Configure loguru
-logger.add("/logs/pipeline.log", rotation="10 MB", retention="30 days")
-
-# Pandera schema for DataFrame validation
-clinical_schema = DataFrameSchema({
-    "patient_id": Column(str, checks=Check.str_matches(r'^P\d{3}$')),
-    "visit_date": Column(str),
-    "measurement": Column(float, checks=Check.in_range(0, 200), nullable=True),
-    "lab_test": Column(str, checks=Check.isin(['blood_pressure', 'glucose', 'cholesterol'])),
-    "notes": Column(str, nullable=True)
-})
-
-class ClinicalDataValidator:
-    def __init__(self):
-        self.db = AuditDatabase()
-        logger.info("Pipeline initialized with database audit trail")
-        
     def calculate_hash(self, data: str) -> str:
         """Calculate SHA-256 hash for data integrity"""
         return hashlib.sha256(data.encode()).hexdigest()
-    
-    def extract_data(self, path: str) -> pd.DataFrame:
-        """Extract clinical data with validation"""
-        logger.info(f"Extracting data from {path}")
-        df = pd.read_csv(path)
-        data_hash = self.calculate_hash(df.to_json())
+
+    async def log_audit(self, action: str, details: str, record_hash: Optional[str] = None):
+        """Log action to audit trail with strict transaction handling"""
+        try:
+            audit_entry = AuditLog(
+                action=action,
+                details=details,
+                record_hash=record_hash
+            )
+            self.db.add(audit_entry)
+            await self.db.commit() # Ensure atomicity at the log level if needed immediately, or let caller handle commit
+            # In a service pattern, usually we might let the UOW handle commit, but for audit logs we often want them immediate.
+            # However, sharing the session means we should be careful.
+            # Let's assume we commit here for the audit log specifically to ensure it's written.
+            # But if the main transaction fails, we might want to ANYWAY log the failure.
+            # For now, we use the passed session.
+        except Exception as e:
+            logger.error(f"Failed to write audit log: {e}")
+            # If logging fails, we might want to alert, but not crash the whole request?
+            # GxP requirements usually say if audit fails, everything must fail.
+            raise e
+
+    async def process_file(self, content: bytes, filename: str) -> Dict:
+        """Process and validate uploaded file"""
+        logger.info(f"Processing file: {filename}")
         
-        self.db.log_action(
-            "EXTRACT", 
-            f"Loaded {len(df)} records. Hash: {data_hash[:16]}..."
+        # 1. EXTRACT
+        try:
+            df = pd.read_csv(pd.io.common.BytesIO(content))
+        except Exception as e:
+            raise ValueError(f"Failed to parse CSV: {str(e)}")
+
+        raw_json = df.to_json()
+        input_hash = self.calculate_hash(raw_json)
+        
+        await self.log_audit(
+            action="EXTRACT",
+            details=f"Received file {filename}. Records: {len(df)}",
+            record_hash=input_hash
         )
-        logger.success(f"Extracted {len(df)} records")
-        return df
-    
-    def validate_data(self, df: pd.DataFrame) -> Tuple[Dict, pd.DataFrame]:
-        """Apply GxP-style validation rules with Pandera"""
-        logger.info("Starting validation")
-        validation_results = {
-            "total_records": len(df),
-            "validation_timestamp": datetime.now().isoformat(),
-            "checks": {}
+
+        # 2. VALIDATE
+        validation_results, df_validated = self._validate_dataframe(df)
+        
+        await self.log_audit(
+            action="VALIDATE",
+            details=json.dumps(validation_results),
+            record_hash=input_hash # Link validation to input hash
+        )
+
+        # 3. TRANSFORM
+        df_clean = self._transform_dataframe(df_validated)
+        
+        output_json = df_clean.to_json()
+        output_hash = self.calculate_hash(output_json)
+
+        await self.log_audit(
+            action="TRANSFORM",
+            details=f"Cleaned records: {len(df_clean)}",
+            record_hash=output_hash
+        )
+        
+        return {
+            "filename": filename,
+            "validation_results": validation_results,
+            "processed_records": len(df_clean),
+            "input_hash": input_hash,
+            "output_hash": output_hash,
+            "cleaned_data": df_clean.to_dict(orient="records")
+        }
+
+    def _validate_dataframe(self, df: pd.DataFrame) -> Tuple[Dict, pd.DataFrame]:
+        """Internal validation logic"""
+        results = {
+            "valid": True,
+            "timestamp": datetime.utcnow().isoformat(),
+            "errors": []
         }
         
-        # Pandera schema validation
+        # Pandera Schema Validation
         try:
             validated_df = clinical_schema.validate(df, lazy=True)
-            validation_results["checks"]["schema_valid"] = True
-            logger.success("Schema validation passed")
         except pa.errors.SchemaErrors as e:
-            validation_results["checks"]["schema_valid"] = False
-            validation_results["checks"]["schema_errors"] = str(e)
-            logger.warning(f"Schema validation errors: {e}")
-            validated_df = df
-        
-        # Missing data check
-        critical_fields = ['patient_id', 'visit_date', 'measurement']
-        missing = df[critical_fields].isnull().sum()
-        validation_results["checks"]["missing_data"] = missing.to_dict()
-        
-        # Duplicate check
-        duplicates = df.duplicated(subset=['patient_id', 'visit_date']).sum()
-        validation_results["checks"]["duplicates"] = int(duplicates)
-        
-        # Range validation
-        if 'measurement' in df.columns:
-            out_of_range = ((df['measurement'] < 0) | (df['measurement'] > 200)).sum()
-            validation_results["checks"]["out_of_range"] = int(out_of_range)
-        
-        # Pydantic record-level validation
-        validation_results["checks"]["pydantic_valid_records"] = 0
+            results["valid"] = False
+            # Serializable error structure
+            results["errors"].append({"type": "schema", "details": str(e)})
+            validated_df = df # Continue with raw data if schema fails, to flag specific rows? 
+            # Or usually we might stop. Original code continued.
+
+        # Pydantic Row Validation
+        invalid_rows = 0
         for idx, row in df.iterrows():
             try:
                 ClinicalRecord(**row.to_dict())
-                validation_results["checks"]["pydantic_valid_records"] += 1
-            except Exception:
-                pass
+            except Exception as e:
+                invalid_rows += 1
+                # We could log specific row errors here if detailed reporting is needed
         
-        self.db.log_action(
-            "VALIDATE",
-            json.dumps(validation_results["checks"])
-        )
-        logger.info(f"Validation complete: {validation_results['checks']}")
+        results["pydantic_invalid_count"] = invalid_rows
+        if invalid_rows > 0:
+             results["valid"] = False
         
-        return validation_results, validated_df
-    
-    def transform_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Clean and standardize data"""
-        logger.info("Starting transformation")
+        return results, validated_df
+
+    def _transform_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Clean and standardize"""
+        df_clean = df.copy()
+        # Drop rows where critical ID is missing
+        if 'patient_id' in df_clean.columns:
+            df_clean = df_clean.dropna(subset=['patient_id'])
         
-        df_clean = df.dropna(subset=['patient_id']).copy()
-        df_clean.columns = [col.strip().lower().replace(" ", "_") for col in df_clean.columns]
-        
-        # Add metadata
-        df_clean['validated_at'] = datetime.now().isoformat()
-        df_clean['validation_version'] = '1.0.0'
-        
-        self.db.log_action(
-            "TRANSFORM",
-            f"Cleaned to {len(df_clean)} valid records from {len(df)} total"
-        )
-        logger.success(f"Transformed {len(df)} → {len(df_clean)} records")
+        # Standardize columns
+        df_clean.columns = [str(col).strip().lower().replace(" ", "_") for col in df_clean.columns]
         
         return df_clean
-    
-    def load_data(self, df: pd.DataFrame, output_path: str):
-        """Save validated data with integrity hash"""
-        data_hash = self.calculate_hash(df.to_json())
-        df.to_csv(output_path, index=False)
-        
-        self.db.log_action(
-            "LOAD",
-            f"Saved to {output_path}. Records: {len(df)}. Hash: {data_hash[:16]}..."
-        )
-        logger.success(f"Data loaded to {output_path}")
-    
-    def generate_report(self, validation_results: Dict, df_raw: pd.DataFrame, df_clean: pd.DataFrame):
-        """Generate comprehensive validation report"""
-        report_path = "/logs/validation_report.txt"
-        
-        with open(report_path, "w") as f:
-            f.write("=" * 70 + "\n")
-            f.write("GxP CLINICAL DATA VALIDATION REPORT\n")
-            f.write("=" * 70 + "\n\n")
-            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Validation Version: 1.0.0\n\n")
-            
-            f.write("SUMMARY\n")
-            f.write("-" * 70 + "\n")
-            f.write(f"Total Records Processed: {len(df_raw)}\n")
-            f.write(f"Valid Records: {len(df_clean)}\n")
-            f.write(f"Rejected Records: {len(df_raw) - len(df_clean)}\n\n")
-            
-            f.write("VALIDATION CHECKS\n")
-            f.write("-" * 70 + "\n")
-            f.write(json.dumps(validation_results["checks"], indent=2))
-            f.write("\n\n")
-            
-            f.write("COMPLIANCE NOTES\n")
-            f.write("-" * 70 + "\n")
-            f.write("- Data integrity verified with SHA-256 hashing\n")
-            f.write("- Audit trail maintained in SQLite database\n")
-            f.write("- All validation rules documented and executed\n")
-            f.write("- Timestamps recorded for all operations\n")
-        
-        logger.info(f"Report generated: {report_path}")
-    
-    def close(self):
-        """Clean up resources"""
-        self.db.close()
-        logger.info("Pipeline closed successfully")
-
-def run_pipeline():
-    """Main pipeline execution"""
-    logger.info("=" * 50)
-    logger.info("Starting Clinical Data Validation Pipeline")
-    logger.info("=" * 50)
-    
-    validator = ClinicalDataValidator()
-    
-    try:
-        # Execute pipeline
-        df_raw = validator.extract_data("/data/sample_clinical_data.csv")
-        validation_results, df_validated = validator.validate_data(df_raw)
-        df_clean = validator.transform_data(df_validated)
-        validator.load_data(df_clean, "/data/validated_output.csv")
-        validator.generate_report(validation_results, df_raw, df_clean)
-        
-        logger.success("Pipeline completed successfully")
-        
-    except Exception as e:
-        logger.error(f"Pipeline failed: {str(e)}")
-        validator.db.log_action("ERROR", str(e))
-        raise
-    
-    finally:
-        validator.close()
-
-if __name__ == "__main__":
-    run_pipeline()

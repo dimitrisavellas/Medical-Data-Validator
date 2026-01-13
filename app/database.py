@@ -1,43 +1,24 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from datetime import datetime
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from typing import AsyncGenerator
+from app.config.settings import settings
 
-Base = declarative_base()
+engine = create_async_engine(
+    settings.database_url,
+    echo=False,
+    future=True
+)
 
-class AuditLog(Base):
-    """SQLite audit trail table"""
-    __tablename__ = 'audit_log'
-    
-    id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime, default=datetime.now)
-    action = Column(String(50), nullable=False)
-    details = Column(Text)
-    user = Column(String(100), default='system')
-    record_hash = Column(String(64))  # For data integrity verification
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False
+)
 
-class AuditDatabase:
-    def __init__(self, db_path='sqlite:////logs/audit_trail.db'):
-        self.engine = create_engine(db_path)
-        Base.metadata.create_all(self.engine)
-        Session = sessionmaker(bind=self.engine)
-        self.session = Session()
-    
-    def log_action(self, action: str, details: str, user: str = 'system'):
-        """Add entry to audit database"""
-        entry = AuditLog(
-            action=action,
-            details=details,
-            user=user,
-            timestamp=datetime.now()
-        )
-        self.session.add(entry)
-        self.session.commit()
-        return entry.id
-    
-    def get_audit_trail(self):
-        """Retrieve complete audit trail"""
-        return self.session.query(AuditLog).all()
-    
-    def close(self):
-        self.session.close()
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency for getting async session"""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
