@@ -62,3 +62,5 @@ This project demonstrates practical understanding of:
 - Audit trail implementation
 - Data integrity principles
 - Quality assurance automation
+
+As a next step I will try to make this into a production ready service. Check the other branch for updates
