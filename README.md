@@ -1,7 +1,7 @@
-# Clinical Data Validation Pipeline
+# Clinical Data Validation Pipeline 
 
 ## Overview
-Production-grade GxP-compliant data validation system for pharmaceutical regulatory affairs, demonstrating enterprise-level data integrity and audit trail practices.
+Production-grade-ish GxP-compliant data validation system for pharmaceutical regulatory affairs, demonstrating enterprise-level data integrity and audit trail practices.
 
 ## Architecture
 
@@ -72,3 +72,6 @@ This project demonstrates practical understanding of:
 - Audit trail implementation
 - Data integrity principles
 - Quality assurance automation
+
+
+Important note: This is a personal project to become a better scientist, I'm not encouraging anyone to use it for medical data handling without proper testing. This microservice can contain mistakes as some part were vibecoded with Google's Antigravity 
