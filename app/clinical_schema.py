@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import datetime
 from typing import Optional
+import pandera as pa
+from pandera import Column, Check, DataFrameSchema
 
 class ClinicalRecord(BaseModel):
     """Pydantic model for clinical data validation"""
@@ -35,21 +37,13 @@ class ClinicalRecord(BaseModel):
         if lab_test == "blood_pressure" and measurement is not None:
             # Hypotension Rule
             if measurement < 90 and "normal" in notes:
-                raise ValueError(
-                    f"Clinical Mismatch: BP of {measurement} indicates Hypotension but notes say 'Normal'"
-                )
+                raise ValueError(f"Clinical Mismatch: BP of {measurement} indicates Hypotension but notes say 'Normal'")
             # Hypertension Rule
             if measurement > 140 and "normal" in notes:
-                raise ValueError(
-                    f"Clinical Mismatch: BP of {measurement} indicates Hypertension but notes say 'Normal'"
-                )
+                raise ValueError(f"Clinical Mismatch: BP of {measurement} indicates Hypertension but notes say 'Normal'")
             # Conflict Rule: Normal range but marked Abnormal
-            # Assuming normal range is [90, 120] based on the prompt's Conflict Rule description
             if 90 <= measurement <= 120 and "abnormal" in notes:
-                raise ValueError(
-                    f"Clinical Mismatch: BP of {measurement} is within normal range (90-120) but notes say 'Abnormal'"
-                )
-
+                raise ValueError(f"Clinical Mismatch: BP of {measurement} is within normal range (90-120) but notes say 'Abnormal'")
         return self
 
     model_config = {
@@ -65,9 +59,6 @@ class ClinicalRecord(BaseModel):
     }
 
 # Pandera schema for DataFrame validation
-import pandera as pa
-from pandera import Column, Check, DataFrameSchema
-
 clinical_schema = DataFrameSchema({
     "patient_id": Column(str, checks=Check.str_matches(r'^P\d{3}$')),
     "visit_date": Column(str),

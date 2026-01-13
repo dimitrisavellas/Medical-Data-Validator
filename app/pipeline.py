@@ -93,7 +93,8 @@ class ValidationService:
         results = {
             "valid": True,
             "timestamp": datetime.utcnow().isoformat(),
-            "errors": []
+            "errors": [],
+            "checks": {"errors": []}
         }
         
         # Pandera Schema Validation
@@ -107,17 +108,16 @@ class ValidationService:
             # Or usually we might stop. Original code continued.
 
         # Pydantic Row Validation
-        invalid_rows = 0
         for idx, row in df.iterrows():
             try:
                 ClinicalRecord(**row.to_dict())
-            except Exception as e:
-                invalid_rows += 1
-                # We could log specific row errors here if detailed reporting is needed
-        
-        results["pydantic_invalid_count"] = invalid_rows
-        if invalid_rows > 0:
-             results["valid"] = False
+            except ValueError as e:
+                results["valid"] = False
+                results["checks"]["errors"].append({
+                    "row": idx + 2,
+                    "patient_id": row.get("patient_id", "unknown"),
+                    "error": str(e)
+                })
         
         return results, validated_df
 
