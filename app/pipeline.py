@@ -1,5 +1,3 @@
-import sys
-sys.path.append('/app')
 import pandas as pd
 import pandera.pandas as pa
 from pandera import Column, Check, DataFrameSchema
